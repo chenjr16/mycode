@@ -1,9 +1,9 @@
-#!usr/bin/env python3
 from random import randint
 import sys
 import time
 import os
 import dice
+import random
 
 name = ""
 district = 0
@@ -12,10 +12,30 @@ inventory = []
 equipment = []
 player_health = 100
 
-bestiary = [{'name' : 'goblin', 'health' : 10, 'damage' : '1d5'},
-            {'name' : 'orc', 'health' : 15, 'damage' : '1d8'},
-            {'name' : 'ogre', 'health' : 20, 'damage' : '1d12'}]
-armory = {'sword': {'damage': '1d12'}}
+monsters = [{'name' : 'Monkey Mutts', 'health' : 20, 'damage' : '1d5'},
+            {'name' : 'Jabberjays', 'health' : 25, 'damage' : '1d8'},
+            {'name' : 'Tracker Jackers', 'health' : 30, 'damage' : '1d10'}]
+
+tributes = [{'name' : 'Facet', 'district': 1, 'health' : 50, 'damage' : '1d15'},
+            {'name' : 'Marcus', 'district': 2, 'health' : 50, 'damage' : '1d15'},
+            {'name' : 'Circ', 'district': 3, 'health' : 50, 'damage' : '1d15'},
+            {'name' : 'Mizzen', 'district': 4, 'health' : 50, 'damage' : '1d15'},
+            {'name' : 'Hy', 'district': 5, 'health' : 50, 'damage' : '1d15'},
+            {'name' : 'Otto', 'district': 6, 'health' : 50, 'damage' : '1d15'},
+            {'name' : 'Treech', 'district': 7, 'health' : 50, 'damage' : '1d20'},
+            {'name' : 'Bobbin', 'district': 8, 'health' : 50, 'damage' : '1d20'},
+            {'name' : 'Panlo', 'district': 9, 'health' : 50, 'damage' : '1d20'},
+            {'name' : 'Tanner', 'district': 10, 'health' : 50, 'damage' : '1d20'},
+            {'name' : 'Reapper Ash', 'district': 11, 'health' : 50, 'damage' : '1d20'},
+            {'name' : 'Lucy Gray Baird', 'district': 12, 'health' : 50, 'damage' : '1d20'}]
+
+armory = {
+  'sword': {'damage': '1d15'},
+  'bow&arrow': {'damage': '1d30'},
+  'knife': {'damage': '1d12'},
+  'crossbow': {'damage': '1d25'},
+  'axe': {'damage': '1d30'},
+}
 
 food ={
   'apple': 10,
@@ -34,21 +54,24 @@ arena = {
             'east' : 'BRAZIL',
             'north': 'ARIZONA',
             'west': 'HOUDINI',
-            'item' : ['sword', 'bow and arrow', 'knife', 'crossbow', 'axe', 'apple', 'banana', 'beef'],
-            'desc' : 'You are in the center of the Arena with most resources, however, this is also the most dangerous place.'
+            'item' : ['sword', 'bow&arrow', 'knife', 'crossbow', 'axe', 'apple', 'banana', 'beef'],
+            'desc' : 'You are in the center of the Arena with most resources, however, this is also the most dangerous place.',
+            'randenc' : '30'
             },
         'ARIZONA' : {
             'south' : 'CORNUCOPIA',
             'east' : 'BIGFOOT',
             'west': 'LOWFLYINGHAWK',
             'item' : ['apple', 'banana', 'mushroom'],
-            'desc' : 'You are in the beautiful ARIZONA section. You may collect some food for survival, but be careful, some of them can be poisonous.'
+            'desc' : 'You are in the beautiful ARIZONA section. You may collect some food for survival, but be careful, some of them can be poisonous.',
+            'randenc' : '0'
             },
         'BIGFOOT' : {
             'south' : 'BRAZIL',
             'west': 'ARIZONA',
             'item': ['deer', 'apple', 'bow&arrow'],
             'desc' : 'You are in the BIGFOOT section. Mutated monsters could be around.',
+            'randenc' : '20'
             },
         'BRAZIL' : {
             'west' : 'CORNUCOPIA',
@@ -56,12 +79,14 @@ arena = {
             'north' : 'BIGFOOT',
             'item' : ['rabbit', 'snake'],
             'desc' : 'You are in the wild BRAZIL section. More rewarding items comes with more danger',
+            'randenc' : '10'
             },
         'DAWSON' : {
             'north' : 'BRAZIL',
             'west' : 'DOPPLER',
             'item' : ['banana', 'mushroom', 'knife'],
             'desc' : 'You are in the DAWSON section, some weapons are laying around',
+            'randenc' : '20'
             },
         'DOPPLER' : {
             'east' : 'DAWSON',
@@ -69,25 +94,29 @@ arena = {
             'west': 'FIONA',
             'item' : ['crossbow', 'axe'],
             'desc' : 'You are in the DOPPLER section. It\'s quite winddy here',
+            'randenc' : '20'
             },
         'FIONA' : {
             'east' : 'DOPPLER',
             'north': 'HOUDINI',
             'item' : ['mushroom', 'nightlockberries'],
-            'desc' : 'You are in the FIONA section. '
+            'desc' : 'You are in the FIONA section. ',
+            'randenc' : '0'
             },
         'HOUDINI' : {
             'south' : 'FIONA',
             'east' : 'CORNUCOPIA',
             'north': 'LOWFLYINGHAWK',
             'item' : ['nightlockberries'],
-            'desc' : 'You are in the HOUDINI section'
+            'desc' : 'You are in the HOUDINI section',
+            'randenc' : '0'
             },
         'LOWFLYINGHAWK' : {
             'south' : 'HOUDINI',
             'east' : 'ARIZONA',
             'item' : ['apple', 'banana'],
-            'desc' : 'You are in the LOWFLYINGHAWK section'
+            'desc' : 'You are in the LOWFLYINGHAWK section',
+            'randenc' : '10'
             },
         }
 
@@ -131,14 +160,25 @@ def showStatus(): # display the player's status
   if 'item' in arena[current_location]:
     print('Items available here are: ' + ', '.join(arena[current_location]['item']) + '.')
 
-def combat():
+def random_encounter():
+  randenc = int(arena[current_location]['randenc']) +5
+  if randenc >= 30:
+    fight_tribute()
+    fight_tribute()
+  elif randenc >=20:
+    fight_tribute()
+  elif randenc >=10:
+    fight_monster()
+
+def fight_monster():
+  global player_health, inventory, armory, monsters
+  
   monster_ID= randint(0,2)
 
-  global player_health, inventory, armory, bestiary
   round = 1
-  monster_health = bestiary[monster_ID]['health']
+  monster_health = monsters[monster_ID]['health']
 
-  print(f"A ferocious {bestiary[monster_ID]['name']} approaches! COMBAT HAS BEGUN!\n")
+  print(f"A ferocious {monsters[monster_ID]['name']} approaches! COMBAT HAS BEGUN!\n")
   while True:
     print(f"ROUND {round}")
     print("Player Health: [" + str(player_health) + "]")
@@ -146,25 +186,33 @@ def combat():
 
     print("Type: RUN, ATTACK, or USE [item]") # gotta write code for cast
     move = input().lower().split() # converts move into a lower-case list to deal with each item in list separately
-    monster_damage = sum(dice.roll(bestiary[monster_ID]['damage']))
+    monster_damage = sum(dice.roll(monsters[monster_ID]['damage']))
     print("\n=========================")
 
     if move[0] == 'use': #
-      if move[1] in inventory: # checks if weapon is in your inventory
+      if move[1] in equipment: # checks if weapon is in your inventory
         player_damage = dice.roll(armory[move[1]]['damage'])
-        print(f"You hit a {bestiary[monster_ID]['name']} for {player_damage} damage!")
-      if move[1] not in inventory:
-        print(f"There is no {move[1]} in your inventory!")
+        print(f"You hit a {monsters[monster_ID]['name']} for {player_damage} damage!")
+      if move[1] not in equipment:
+        print(f"There is no {move[1]} in your equipment!")
+
+    if move[0] == 'attack':
+      player_damage = dice.roll('5d10')
+      print(f"You hit a {monsters[monster_ID]['name']} for {player_damage} damage!")
+
+    if move[0] == 'run':
+      print('You made a flawless escape!')
+      break
 
       try:
         monster_health -= int(player_damage)
       except:
         pass
       if monster_health <= 0:
-        print(f"The {bestiary[monster_ID]['name']} lies dead. You are victorious!\n")
+        print(f"The {monsters[monster_ID]['name']} lies dead. You are victorious!\n")
         break
 
-      print(f"A {bestiary[monster_ID]['name']} hits you for {monster_damage} damage!")
+      print(f"A {monsters[monster_ID]['name']} hits you for {monster_damage} damage!")
       print ("=========================\n")
       round += 1
       player_health -= int(monster_damage)
@@ -173,12 +221,78 @@ def combat():
         print("You have been vanquished! You are dead.")
         sys.exit()
 
+def accident():
+  luckynumber= randint(0,2)
+  number_list = random.sample(range(0, len(tributes)), luckynumber)
+  for number in number_list:
+    speech_text((f"{tributes[number]['name']} from district {tributes[number]['district']} has fallen!\n"))
+    del tributes[number]
+
+def fight_tribute():
+  global player_health, inventory, armory, tributes
+  
+  tribute_ID= randint(0,len(tributes))
+
+  round = 1
+  tribute_health = tributes[tribute_ID]['health']
+
+  print(f"{tributes[tribute_ID]['name']} from district {tributes[tribute_ID]['district']} approaches! FIGHT HAS BEGUN!\n")
+  while True:
+    print(f"ROUND {round}")
+    print("Player Health: [" + str(player_health) + "]")
+    print("Tribute Health: [" + str(tribute_health) + "]")
+
+    print("Type: RUN, ATTACK, or USE [item]") # gotta write code for cast
+    move = input().lower().split() # converts move into a lower-case list to deal with each item in list separately
+    tribute_damage = sum(dice.roll(tributes[tribute_ID]['damage']))
+    print("\n=========================")
+
+    if move[0] == 'use': #
+      if move[1] in equipment: # checks if weapon is in your equipment
+        player_damage = dice.roll(armory[move[1]]['damage'])
+        print(f"You hit {tributes[tribute_ID]['name']} for {player_damage} damage!")
+      if move[1] not in equipment:
+        print(f"There is no {move[1]} in your equipment!")
+
+    if move[0] == 'attack':
+      player_damage = dice.roll('5d10')
+      print(f"You attacked {tributes[tribute_ID]['name']} for {player_damage} damage!")
+
+    if move[0] == 'run':
+      print('You made a flawless escape!')
+      break
+      
+    try:
+      tribute_health -= int(player_damage)
+    except:
+      pass
+    if tribute_health <= 0:
+      print(f"{tributes[tribute_ID]['name']} lies dead. You are victorious!\n")
+      del tributes[tribute_ID]
+      break
+
+    print(f"A {tributes[tribute_ID]['name']} hits you for {tribute_damage} damage!")
+    print ("=========================\n")
+    round += 1
+    player_health -= int(tribute_damage)
+
+    if player_health <= 0:
+      speech_text("You have been vanquished! You are dead.\n")
+      sys.exit()
+
+def checkvictory():
+  if len(tributes) == 0:
+    speech_text(f"Congratulations {name} from district {district}, you are the winner of this year's Hunger Games!\n")
+    sys.exit()
+
 def game():
   global player_health, inventory, current_location, equipment
   weapon_list =['sword', 'bow&arrow', 'knife', 'crossbow', 'axe']
   while True:   # MAIN INFINITE LOOP
     playerinfo()
     showStatus()
+    checkvictory()
+    
     # ask the player what they want to do
     move = ''
     while move == '':
@@ -191,12 +305,20 @@ def game():
         current_location = arena[current_location][move[1]]
         if 'desc' in arena[current_location]:
           print(arena[current_location]['desc'])
+        accident()
+        random_encounter()
       else:
         print("YOU CAN'T GO THAT WAY!")
     if move[0] == 'use':
-        if move[1].lower() == 'potion' and 'potion' in inventory:
-          print("You drink from the potion. Your health has been restored!")
-          player_health = 20
+      item = move[1].lower()
+      if item in food.keys() and item in inventory:
+        print(f"You used {item}. Your health is changed to {player_health+ food[item]}")
+        player_health += food[item]
+        inventory.remove(item)
+        if player_health <= 0:
+          print("You have been vanquished! You are dead.")
+          sys.exit()
+        
     if move[0] == 'get':
       if move[1] in weapon_list:
         if len(equipment) < 3:
@@ -232,7 +354,7 @@ def game():
         pass
 
 def main():
-  #welcome_text()
+  welcome_text()
   showInstructions()
   game()
 
